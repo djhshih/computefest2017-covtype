@@ -1,0 +1,14 @@
+name	data_type	measurement	description	n_columns
+Elevation	quantitative	meters	Elevation in meters	1
+Aspect	quantitative	azimuth	Aspect in degrees azimuth	1
+Slope	quantitative	degrees	Slope in degrees	1
+Horizontal_Distance_To_Hydrology	quantitative	meters	Horz Dist to nearest surface water features	1
+Vertical_Distance_To_Hydrology	quantitative	meters	Vert Dist to nearest surface water features	1
+Horizontal_Distance_To_Roadways	quantitative	meters	Horz Dist to nearest roadway	1
+Hillshade_9am	quantitative	0 to 255 index	Hillshade index at 9am, summer solstice	1
+Hillshade_Noon	quantitative	0 to 255 index	Hillshade index at noon, summer soltice	1
+Hillshade_3pm	quantitative	0 to 255 index	Hillshade index at 3pm, summer solstice	1
+Horizontal_Distance_To_Fire_Points	quantitative	meters	Horz Dist to nearest wildfire ignition points	1
+Wilderness_Area	qualitative	0 (absence) or 1 (presence)	Wilderness area designation	4
+Soil_Type	qualitative	0 (absence) or 1 (presence)	Soil Type designation	40
+Cover_Type	integer	1 to 7	Forest Cover Type designation	1

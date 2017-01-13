@@ -1,0 +1,151 @@
+```{r global_options, echo=FALSE}
+opts_chunk$set(dev="svg", fig.width=8, fig.height=6, echo=FALSE, warning=FALSE, message=FALSE);
+```
+
+```{r preamble}
+library(io);
+library(mmalign);
+library(viridis);
+library(reshape2);
+library(ggplot2);
+library(party);
+library(RColorBrewer);
+
+source("plot.R");
+```
+
+```{r preprocess, cache=TRUE}
+d <- qread("data.rds");
+e <- qread("data_expanded.rds");
+
+xd <- d[, -ncol(d)];
+xe <- e[, -ncol(e)];
+
+y <- d$Cover_Type;
+yd <- d[, "Cover_Type", drop=FALSE];
+
+cover.colours <- brewer.pal(7, "Set1");
+
+xet <- t(as.matrix(xe));
+
+p <- pca(xet, center.features=TRUE, scale.features=TRUE);
+
+not.outlier <- apply(p$Z, 2, function(x) all(abs(x) < 10));
+
+set.seed(1234);
+sub.idx <- sample(which(not.outlier), 5000);
+
+xes <- xe[sub.idx, ];
+xds <- xd[sub.idx, ];
+xets <- xet[, sub.idx];
+yds <- yd[sub.idx, , drop=FALSE];
+ds <- d[sub.idx, ];
+zs <- p$Z[, sub.idx];
+```
+
+## Principal component analysis
+
+We first examine whether the features are globally correlated with the
+response variable, forest cover type. Outliers have been removed from PCA
+plots to avoid excessive skew.
+
+```{r pca}
+mmalign:::pca_plot_base(zs, yds, aes(colour=Cover_Type), vars=p$var, dims=1:2) +
+	geom_point(alpha=0.3) +
+	theme(plot.title=element_text(hjust=0)) +
+	scale_colour_manual(values=cover.colours) +
+	ggtitle("Principal component analysis of feature data")
+
+mmalign:::pca_plot_base(zs, yds, aes(colour=Cover_Type), vars=p$var, dims=2:3) +
+	geom_point(alpha=0.3) + 
+	theme(plot.title=element_text(hjust=0)) +
+	scale_colour_manual(values=cover.colours) +
+	ggtitle("Principal component analysis of feature data")
+
+mmalign:::pca_plot_base(zs, yds, aes(colour=Cover_Type), vars=p$var, dims=3:4) +
+	geom_point(alpha=0.3) + 
+	theme(plot.title=element_text(hjust=0)) +
+	scale_colour_manual(values=cover.colours) +
+	ggtitle("Principal component analysis of feature data")
+
+mmalign:::pca_plot_base(zs, yds, aes(colour=Cover_Type), vars=p$var, dims=4:5) +
+	geom_point(alpha=0.3) + 
+	theme(plot.title=element_text(hjust=0)) +
+	scale_colour_manual(values=cover.colours) +
+	ggtitle("Principal component analysis of feature data")
+```
+
+
+## Correlative features
+
+To identify features that correlate with the forest cover type, we correlate
+each feature with each forest cover type.
+
+```{r cors, fig.height=4}
+ye <- lapply(levels(y),
+	function(v) {
+		as.numeric(y == v)
+	}
+);
+names(ye) <- levels(y);
+ye <- data.frame(ye, check.names=FALSE);
+
+cors <- apply(xe, 2, function(x) cor(x, ye));
+rownames(cors) <- colnames(ye);
+
+cors.dm <- melt(cors, varnames=c("y", "x"));
+
+g <- ggplot(cors.dm, aes(x=x, y=y, fill=value)) + 
+	geom_tile(color="white", size=0.1) +
+	scale_fill_viridis(name="correlation") +
+	coord_equal() + 
+	labs(x=NULL, y=NULL, title="Correlations between forest features and cover types") +
+	theme(plot.title=element_text(hjust=0)) +
+	theme(axis.ticks=element_blank()) +
+	theme(axis.text.y=element_text(size=7)) +
+	theme(axis.text.x=element_text(size=7, angle=45, hjust=1)) +
+	theme(legend.title=element_text(size=8)) +
+	theme(legend.text=element_text(size=6))
+g
+```
+
+The heatmap reveals that elevation, some wilderness areas, and some
+soil types are correlated with some forest cover types.
+
+
+```{r}
+f <- with(ds,
+	Cover_Type ~ Elevation + Aspect + Slope + Soil_Type + Wilderness_Area +
+		Horizontal_Distance_To_Hydrology + Vertical_Distance_To_Hydrology + 
+		Horizontal_Distance_To_Roadways + Hillshade_9am + Hillshade_Noon +
+		Hillshade_3pm + Horizontal_Distance_To_Fire_Points
+);
+```
+
+## Conditional inference trees
+
+Finally, we illustrate how each candidate feature can help predict forest cover type
+using decision trees.
+
+```{r tree_elevation, fig.height=8}
+ct.e <- ctree(Cover_Type ~ Elevation, data = ds, controls=ctree_control(maxdepth=2));
+plot(ct.e, main="Cover_Type ~ Elevation",
+	tp_args=list(fill=cover.colours, col=NA, gap=0),
+	terminal_panel=node_barplot_rot);
+```
+
+```{r tree_wilderness, fig.height=8}
+ct.w <- ctree(Cover_Type ~ Wilderness_Area, data = ds);
+plot(ct.w, main="Cover_Type ~ Wilderness_Area",
+	tp_args=list(fill=cover.colours, col=NA, gap=0),
+	terminal_panel=node_barplot_rot);
+```
+
+```{r tree_soil_type, fig.height=8}
+ct.s <- ctree(Cover_Type ~ Soil_Type, data = ds,
+							controls=ctree_control(maxdepth=2));
+plot(ct.s, main="Cover_Type ~ Soil_Type",
+	tp_args=list(fill=cover.colours, col=NA, gap=0),
+	terminal_panel=node_barplot_rot);
+```
+
